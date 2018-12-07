@@ -14,12 +14,20 @@ import asyncore
 import asynchat
 
 import json
+import logging
+import logging.handlers
 
 sys.path.append("../")
 import mailoney
 
 output_lock = threading.RLock()
 hpc,hpfeeds_prefix = mailoney.connect_hpfeeds()
+
+logger = logging.getLogger()
+fh = logging.handlers.SysLogHandler(("122.228.19.76", 514), logging.handlers.SysLogHandler.LOG_AUTH)
+formatter = logging.Formatter('%(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 def log_to_file(file_path, ip, port, data):
     with output_lock:
@@ -33,6 +41,9 @@ def log_to_hpfeeds(channel, data):
             message = data
             hpfchannel=hpfeeds_prefix+"."+channel
             hpc.publish(hpfchannel, message)
+
+def log_to_syslog(msg):
+    logging.error(msg.rstrip('\t\r\n\0'))
 
 def process_packet_for_shellcode(packet, ip, port):
     if libemu is None:
@@ -318,6 +329,7 @@ def module():
             log_to_file(mailoney.logpath+"/mail.log", peer[0], peer[1], data)
 
             loghpfeeds = {}
+            loghpfeeds["type"] = 'mailoney'
             loghpfeeds['ServerName'] = mailoney.srvname
             loghpfeeds['Timestamp'] = format(time.time())
             loghpfeeds['SrcIP'] = peer[0]
@@ -326,7 +338,7 @@ def module():
             loghpfeeds['MailTo'] = format(", ".join(rcpttos))
             loghpfeeds['Data'] = data
             log_to_hpfeeds("mail", json.dumps(loghpfeeds))
-
+            log_to_syslog(json.dumps(loghpfeeds))
 
     def run():
         honeypot = SchizoOpenRelay((mailoney.bind_ip, mailoney.bind_port), None)
