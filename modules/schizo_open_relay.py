@@ -43,7 +43,7 @@ def log_to_hpfeeds(channel, data):
             hpc.publish(hpfchannel, message)
 
 def log_to_syslog(msg):
-    logging.error(msg.rstrip('\t\r\n\0'))
+    logger.error(msg.rstrip('\t\r\n\0'))
 
 def process_packet_for_shellcode(packet, ip, port):
     if libemu is None:
@@ -57,6 +57,7 @@ def process_packet_for_shellcode(packet, ip, port):
         #log_to_hpfeeds("/shellcode", ip, port, emulator.emu_profile_output)
         log_to_file(mailoney.logpath+"/shellcode.log", ip, port, packet)
         log_to_hpfeeds("shellcode",  json.dumps({ "Timestamp":format(time.time()), "ServerName": self.__fqdn, "SrcIP": self.__addr[0], "SrcPort": self.__addr[1],"Shellcode" :packet}))
+        log_to_syslog(json.dumps({"type":"mailoney","Timestamp":format(time.time()), "ServerName": self.__fqdn, "SrcIP": self.__addr[0], "SrcPort": self.__addr[1],"Shellcode" :packet}))
 
 
 
